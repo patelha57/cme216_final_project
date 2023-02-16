@@ -2,15 +2,13 @@
 
 """
 import numpy as np
-
-from utils import mpi
+import mpi
 
 __all__ = [
     'Model',
     'ModelGrid',
     'ModelMarker',
-    'preprocess_solver',
-    'run_solver'
+    'preprocess_solver'
 ]
 
 
@@ -492,11 +490,4 @@ def preprocess_solver(solver, markers):
 
         marker.reorder(ids)
 
-
-def run_solver(solver):
-    # run flow solver
-    solver.ResetConvergence()
-    solver.Run()
-    solver.Postprocess()
-    solver.Monitor(0)
-    solver.Output(0)
+    return model

@@ -22,6 +22,7 @@ else:
 
 
 __all__ = [
+    'MPIPartitions',
     'COMM',
     'SIZE',
     'RANK',
@@ -37,8 +38,7 @@ __all__ = [
     'allsum',
     'allgather',
     'gather',
-    'scatter',
-    'MPIPartitions'
+    'scatter'
 ]
 
 
@@ -169,9 +169,7 @@ class MPIPartitions:
     """Dataclass. MPI data partitioning information container (for all ranks).
 
     """
-
     def __init__(self, ids, domain):
-
         # distinguish between internal (domain) and exchange (halo) indices
         internal_local = []
         exchange_local = []
@@ -444,9 +442,7 @@ class MPIPartition:
     """Dataclass. MPI data partitioning information (for one rank).
 
     """
-
     def __init__(self, rank, ids, internal, exchange=None):
-
         # rank for which partitioning data is being stored
         self._rank = rank
 
@@ -516,9 +512,7 @@ class MPIPartitionView:
     """Dataclass. MPI partition index map (local and global).
 
     """
-
     def __init__(self, mapping):
-
         # length of the partition subset
         size = len(mapping)
 

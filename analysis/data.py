@@ -3,8 +3,8 @@ import glob
 import shutil
 import numpy as np
 
-from utils import mpi
-from analysis import models
+import mpi
+import models
 
 import pysu2
 
@@ -42,7 +42,6 @@ if mpi.isroot():
 config = 'euler.cfg'
 markers = ['AIRFOIL']
 nzone = 1
-marker_id = 0
 
 # specify range of angle of attack
 alpha_delta = 0.1
@@ -70,7 +69,7 @@ mpi.barrier()
 # initialize flow solver
 config = f'../data/NACA0012/{config}'
 solver = pysu2.CSinglezoneDriver(config, nzone, mpi.COMM)
-models.preprocess_solver(solver, markers)
+model = models.preprocess_solver(solver, markers)
 
 # set flight conditions
 for mach in mach_data:
@@ -82,18 +81,53 @@ for mach in mach_data:
         if mpi.isroot():
             print(f'Finished setting Mach number = {mach} and angle of attack = {alpha} [deg] for CFD run...')
 
-        # update CFD solution
-        models.run_solver(solver)
+        mpi.barrier()
+
+        # run flow solver
+        solver.ResetConvergence()
+        solver.Run()
+        solver.Postprocess()
+        solver.Monitor(0)
+        solver.Output(0)
 
         # extract flow data on the airfoil surface
-        primitives = np.asarray(solver.GetMarkerPrimitiveStates(marker_id), dtype=float)
-        temps      = np.asarray(solver.GetMarkerTemperatures(marker_id), dtype=float)
-        viscosity  = np.asarray(solver.GetMarkerLaminarViscosities(marker_id), dtype=float)
-        states     = np.asarray(solver.GetMarkerStates(marker_id), dtype=float)
-        normals    = np.asarray(solver.GetMarkerVertexNormals(marker_id, False), dtype=float)
+        for marker_tag in markers:
+            marker = model.grid.marker(marker_tag)
 
-        # calculate areas
-        areas = np.sqrt(np.sum(normals**2, axis=1))
+            if marker.index is None:
+                primitives_local = ()
+                temps_local      = ()
+                viscosity_local  = ()
+                states_local     = ()
+                normals_local    = ()
+            else:
+                primitives_local = solver.GetMarkerPrimitiveStates(marker.index)
+                temps_local      = solver.GetMarkerTemperatures(marker.index)
+                viscosity_local  = solver.GetMarkerLaminarViscosities(marker.index)
+                states_local     = solver.GetMarkerStates(marker.index)
+                normals_local    = solver.GetMarkerVertexNormals(marker.index, False)
+
+            primitives_array = np.asarray(primitives_local, dtype=float).reshape(-1, model.nvar)
+            temps_array      = np.asarray(temps_local, dtype=float).reshape(-1, 1)
+            viscosity_array  = np.asarray(viscosity_local, dtype=float).reshape(-1, 1)
+            states_array     = np.asarray(states_local, dtype=float).reshape(-1, model.nvar)
+            normals_array    = np.asarray(normals_local, dtype=float).reshape(-1, model.ndim)
+
+            if mpi.isparallel():
+                primitives = marker.partitions.gather(primitives_array)
+                temps      = marker.partitions.gather(temps_array)
+                viscosity  = marker.partitions.gather(viscosity_array)
+                states     = marker.partitions.gather(states_array)
+                normals    = marker.partitions.gather(normals_array)
+
+            else:
+                primitives = primitives_array
+                temps      = temps_array
+                viscosity  = viscosity_array
+                states     = states_array
+                normals    = normals_array
+
+            areas = np.sqrt(np.sum(normals**2, axis=1))
 
         # extract aerodynamic drag coefficient
         Cd = solver.GetDrag(coefficient=True)
