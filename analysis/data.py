@@ -4,6 +4,7 @@ import shutil
 import numpy as np
 
 from utils import mpi
+from analysis import models
 
 import pysu2
 
@@ -15,10 +16,12 @@ FMT = '% .16e'
 FMT_HEADER = '%22.22s'
 
 primitive_vars = ['DENSITY', 'VELOCITY-X', 'VELOCITY-Y', 'PRESSURE', 'TEMPERATURE', 'VISCOSITY']
-state_vars = ['DENSITY', 'MOMENTUM-X', 'MOMENTUM-Y', 'ENERGY']
+state_vars     = ['DENSITY', 'MOMENTUM-X', 'MOMENTUM-Y', 'ENERGY']
+geometry_vars  = ['NORMAL-X', 'NORMAL-Y', 'AREA']
 
 primitives_header = ', '.join((FMT_HEADER % var) for var in primitive_vars)[1:]
 states_header     = ', '.join((FMT_HEADER % var) for var in state_vars)[1:]
+geometry_header   = ', '.join((FMT_HEADER % var) for var in geometry_vars)[1:]
 
 if mpi.isroot():
     # remove old folders
@@ -37,6 +40,7 @@ if mpi.isroot():
 
 # user-defined options
 config = 'euler.cfg'
+markers = ['AIRFOIL']
 nzone = 1
 marker_id = 0
 
@@ -54,8 +58,8 @@ mach_max    = 0.7
 num_samples = int(np.ceil((mach_max - mach_min) / mach_delta)) + 1
 mach_data   = np.linspace(mach_min, mach_max, num=num_samples, dtype=float)
 
-# mach_data = np.array([0.3, 0.7])   # this is for testing purposes only
-# alpha_data = np.array([0., 1.])    # this is for testing purposes only
+mach_data = np.array([0.3, 0.7])   # this is for testing purposes only
+alpha_data = np.array([0., 1.])    # this is for testing purposes only
 
 mpi.barrier()
 
@@ -64,7 +68,9 @@ mpi.barrier()
 ################################################################################
 
 # initialize flow solver
+config = f'../data/NACA0012/{config}'
 solver = pysu2.CSinglezoneDriver(config, nzone, mpi.COMM)
+models.preprocess_solver(solver, markers)
 
 # set flight conditions
 for mach in mach_data:
@@ -76,21 +82,18 @@ for mach in mach_data:
         if mpi.isroot():
             print(f'Finished setting Mach number = {mach} and angle of attack = {alpha} [deg] for CFD run...')
 
-        # run CFD iterations
-        solver.ResetConvergence()
-        solver.Preprocess(0)
-        solver.Run()
-        solver.Postprocess()
-        solver.Monitor(0)
-        solver.Output(0)
-
-        mpi.barrier()
+        # update CFD solution
+        models.run_solver(solver)
 
         # extract flow data on the airfoil surface
         primitives = np.asarray(solver.GetMarkerPrimitiveStates(marker_id), dtype=float)
         temps      = np.asarray(solver.GetMarkerTemperatures(marker_id), dtype=float)
         viscosity  = np.asarray(solver.GetMarkerLaminarViscosities(marker_id), dtype=float)
         states     = np.asarray(solver.GetMarkerStates(marker_id), dtype=float)
+        normals    = np.asarray(solver.GetMarkerVertexNormals(marker_id, False), dtype=float)
+
+        # calculate areas
+        areas = np.sqrt(np.sum(normals**2, axis=1))
 
         # extract aerodynamic drag coefficient
         Cd = solver.GetDrag(coefficient=True)
@@ -99,8 +102,9 @@ for mach in mach_data:
             print(f'Aerodynamic drag coefficient = {Cd}')
 
             # save simulation results to file
-            np.savetxt('primitives.dat', np.hstack((primitives, temps, viscosity)), fmt=FMT, header=primitives_header)
+            np.savetxt('primitives.dat', np.column_stack((primitives, temps, viscosity)), fmt=FMT, header=primitives_header)
             np.savetxt('states.dat', states, fmt=FMT, header=states_header)
+            np.savetxt('geometry.dat', np.column_stack((normals, areas)), fmt=FMT, header=geometry_header)
 
             # create output folder and move simulation result files
             dir_name = f'mach_{mach}_alpha_{alpha}'
