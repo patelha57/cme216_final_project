@@ -57,9 +57,6 @@ mach_max    = 0.7
 num_samples = int(np.ceil((mach_max - mach_min) / mach_delta)) + 1
 mach_data   = np.linspace(mach_min, mach_max, num=num_samples, dtype=float)
 
-mach_data = np.array([0.3, 0.7])   # this is for testing purposes only
-alpha_data = np.array([0., 1.])    # this is for testing purposes only
-
 mpi.barrier()
 
 ################################################################################
@@ -74,14 +71,14 @@ model = models.preprocess_solver(solver, markers)
 # set flight conditions
 for mach in mach_data:
     for alpha in alpha_data:
+        mpi.barrier()
+
         # set angle of attack and Mach number
         solver.SetAngleOfAttack(alpha)
         solver.SetMachNumber(mach)
 
         if mpi.isroot():
             print(f'Finished setting Mach number = {mach} and angle of attack = {alpha} [deg] for CFD run...')
-
-        mpi.barrier()
 
         # run flow solver
         solver.ResetConvergence()
@@ -107,6 +104,7 @@ for mach in mach_data:
                 states_local     = solver.GetMarkerStates(marker.index)
                 normals_local    = solver.GetMarkerVertexNormals(marker.index, False)
 
+            # convert data to arrays and gather
             primitives_array = np.asarray(primitives_local, dtype=float).reshape(-1, model.nvar)
             temps_array      = np.asarray(temps_local, dtype=float).reshape(-1, 1)
             viscosity_array  = np.asarray(viscosity_local, dtype=float).reshape(-1, 1)
@@ -127,7 +125,15 @@ for mach in mach_data:
                 states     = states_array
                 normals    = normals_array
 
-            areas = np.sqrt(np.sum(normals**2, axis=1))
+            # sort values
+            primitives = marker.sort(primitives)
+            temps      = marker.sort(temps)
+            viscosity  = marker.sort(viscosity)
+            states     = marker.sort(states)
+            normals    = marker.sort(normals)
+
+        # compute areas from surface normals
+        areas = np.sqrt(np.sum(normals**2, axis=1))
 
         # extract aerodynamic drag coefficient
         Cd = solver.GetDrag(coefficient=True)
@@ -136,9 +142,9 @@ for mach in mach_data:
             print(f'Aerodynamic drag coefficient = {Cd}')
 
             # save simulation results to file
-            np.savetxt('primitives.dat', np.column_stack((primitives, temps, viscosity)), fmt=FMT, header=primitives_header)
-            np.savetxt('states.dat', states, fmt=FMT, header=states_header)
-            np.savetxt('geometry.dat', np.column_stack((normals, areas)), fmt=FMT, header=geometry_header)
+            # np.savetxt('primitives.dat', np.column_stack((primitives, temps, viscosity)), fmt=FMT, header=primitives_header)
+            # np.savetxt('states.dat', states, fmt=FMT, header=states_header)
+            # np.savetxt('geometry.dat', np.column_stack((normals, areas)), fmt=FMT, header=geometry_header)
 
             # create output folder and move simulation result files
             dir_name = f'mach_{mach}_alpha_{alpha}'

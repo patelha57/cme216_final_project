@@ -300,7 +300,6 @@ class ModelMarker:
     def local(self):
         """Property. The local indices of the Marker data in the Model.
 
-
         """
         return self._local
 
