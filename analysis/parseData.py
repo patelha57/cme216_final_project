@@ -55,6 +55,8 @@ def list_subfolders(folder):
 
 
 
+### euler data
+
 
 # obtain the subfolder list of the root directory 
 eulerRootPath = "/home/yrshen/Desktop/TLMF/euler_data/" 
@@ -63,7 +65,7 @@ eulerSubDirList = list_subfolders(eulerRootPath)
 totalSubDirCount = len(eulerSubDirList)
 print("Total %i directories found, parsing data\n"%totalSubDirCount)
 
-# euler data
+
 
 eulerData = []
 
@@ -81,3 +83,28 @@ print(np.shape(eulerData))
 
 
 
+### RANS data 
+
+ransData = []
+
+# obtain the subfolder list of the root directory 
+ransRootPath = "/home/yrshen/Desktop/TLMF/rans_data/" 
+#   ^dummpy path, for entering the absolute path to data root dir
+ransSubDirList = list_subfolders(ransRootPath)
+totalSubDirCount = len(ransSubDirList)
+print("Total %i directories found, parsing data\n"%totalSubDirCount)
+
+
+# loop over dir list to read data
+for ii in range(totalSubDirCount):
+    curSubPath = ransSubDirList[ii]
+    fileRelPath = curSubPath + "/surface_flow.dat"
+    curdataArray = parse_text_file(fileRelPath)
+    print(np.shape(curdataArray))
+    ransData.append(curdataArray)
+
+
+print(np.shape(ransData))
+
+
+# loop over dir list to read data 
