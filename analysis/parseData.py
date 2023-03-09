@@ -1,9 +1,5 @@
 import os
-import glob 
-import shutil 
 import numpy as np
-import scipy
-import csv 
 
 
 def parse_text_file(file_path):
@@ -45,7 +41,6 @@ def parse_text_file(file_path):
     return data_array
 
 
-
 def list_subfolders(folder):
     subfolders = []
     for dirpath, dirnames, filenames in os.walk(folder):
@@ -56,6 +51,54 @@ def list_subfolders(folder):
     return subfolders
 
 
+def read_tecplot_history_file(filename):
+    """Function. Read tabular data for multiple zones from ASCII Tecplot file.
+    Parameters
+        filename - Tecplot data file
+    Outputs
+        data - history data dictionary
+    """
+    # extract variable names
+    with open(filename, 'r') as file:
+        file.readline()
+        line = file.readline()
+        variables = [var.strip().strip("\"") for var in line.split(',')]
+
+    # organize the data
+    data = {}
+    hist_data = np.loadtxt(filename, delimiter=',', skiprows=2, unpack=True)
+    for idx, variable in enumerate(variables):
+        data[variable] = hist_data[idx]
+
+    return data
+
+
+def get_force_data(filename='forces_breakdown.dat'):
+    """Function. Extract force coefficient data from forces breakdown file.
+    Parameters
+        filename - forces breakdown file
+    Outputs
+        force_data - force data dictionary
+    """
+    force_data = {}
+    with open(filename) as file:
+        line = file.readline()
+        while line:
+            if 'Total' in line.split(':')[0]:
+                coeff = line.split(':')[0].split('Total')[1]
+                split_text = line.split('|')
+                for text in split_text:
+                    if 'Total' in text:
+                        force_data[coeff] = float(text.strip().split()[-1])
+                    elif 'Pressure' in text:
+                        force_data[coeff + 'p'] = float(text.strip().split()[-1])
+                    elif 'Friction' in text:
+                        force_data[coeff + 'v'] = float(text.strip().split()[-1])
+                if 'CFy' in line:
+                    break
+            line = file.readline()
+
+    return force_data
 
 def parse_data(fileRootPath, fileName):
     #parsing data into numpy array 
@@ -116,8 +159,6 @@ for ii in range(totalSubDirCount):
 
 print(np.shape(eulerData))
 
-
-
 ### RANS data 
 
 ransData = []
@@ -140,6 +181,3 @@ for ii in range(totalSubDirCount):
 
 
 print(np.shape(ransData))
-
-
-# loop over dir list to read data 
