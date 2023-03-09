@@ -29,6 +29,8 @@ def parse_text_file(file_path):
 
     # Parse the data
     data_lines = lines[3:3+node_count]
+    #                   ^^ data extends from row 4 : row 4+#nodes
+    #       ^ connectivities not parsed, can be considered latter 
     for line in data_lines:
         row = list(map(float, line.strip().split()))
         data.append(row)
@@ -98,6 +100,42 @@ def get_force_data(filename='forces_breakdown.dat'):
 
     return force_data
 
+def parse_data(fileRootPath, fileName):
+    #parsing data into numpy array 
+    #INNNNNPut
+    #fileRootPath: string of the absolute path to dir containing subfolder of all data 
+    #fileName: the name of the file to be parsed 
+    #OUUUUTput
+    #Data: numPy array contained (Ndata*Nnodes*Nvariables)
+
+    Data = []
+
+    subDirList = list_subfolders(fileRootPath)
+    totalSubDirCount = len(subDirList)
+    print("Total %i directories found, parsing data\n"%totalSubDirCount)
+
+
+    # loop over dir list to read data
+    for ii in range(totalSubDirCount):
+        curSubPath = subDirList[ii]
+        if fileName[0] != '/':
+            fileName = '/'+fileName
+
+        fileRelPath = curSubPath + fileName
+        curdataArray = parse_text_file(fileRelPath)
+        print(np.shape(curdataArray))
+        Data.append(curdataArray)
+
+
+
+    print(np.shape(Data))
+
+    return Data
+
+
+#unit tests 
+### euler data
+
 
 # obtain the subfolder list of the root directory 
 eulerRootPath = "/home/yrshen/Desktop/TLMF/euler_data/" 
@@ -106,9 +144,8 @@ eulerSubDirList = list_subfolders(eulerRootPath)
 totalSubDirCount = len(eulerSubDirList)
 print("Total %i directories found, parsing data\n"%totalSubDirCount)
 
-# euler data
-
 eulerData = []
+
 
 # loop over dir list to read data
 for ii in range(totalSubDirCount):
@@ -122,4 +159,25 @@ for ii in range(totalSubDirCount):
 
 print(np.shape(eulerData))
 
+### RANS data 
 
+ransData = []
+
+# obtain the subfolder list of the root directory 
+ransRootPath = "/home/yrshen/Desktop/TLMF/rans_data/" 
+#   ^dummpy path, for entering the absolute path to data root dir
+ransSubDirList = list_subfolders(ransRootPath)
+totalSubDirCount = len(ransSubDirList)
+print("Total %i directories found, parsing data\n"%totalSubDirCount)
+
+
+# loop over dir list to read data
+for ii in range(totalSubDirCount):
+    curSubPath = ransSubDirList[ii]
+    fileRelPath = curSubPath + "/surface_flow.dat"
+    curdataArray = parse_text_file(fileRelPath)
+    print(np.shape(curdataArray))
+    ransData.append(curdataArray)
+
+
+print(np.shape(ransData))
