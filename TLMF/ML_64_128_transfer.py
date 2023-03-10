@@ -109,10 +109,10 @@ ransData = np.asarray(ransData)
 
 dat = {}
 for idx, variable in enumerate(variables):
-    data_name = f'{variable.lower()}'
+    var_name = variable.lower()
 
-    dat[f'{data_name}_lfs'] = eulerData[:, :, idx]
-    dat[f'{data_name}_hfs'] = ransData[:, :, idx]
+    dat[f'{var_name}_lfs'] = eulerData[:, :, idx]
+    dat[f'{var_name}_hfs'] = ransData[:, :, idx]
 
 '''
 #################################################################
@@ -125,10 +125,14 @@ Phase1 - experiment [LFS]
 #################################################################
 #################################################################
 '''
-# Build LFS data loaders
-test_loader_lfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(64, 64), bs=40, scale='lfs')
 
-train_loader = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(64, 64), bs=40, order=0)
+npoints = 128
+nvars = len(variables)
+
+# Build LFS data loaders
+test_loader_lfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='lfs', variables=variables)
+
+train_loader = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(npoints, nvars), bs=40, variables=variables, order=0)
 
 #########################################################
 #########################################################
