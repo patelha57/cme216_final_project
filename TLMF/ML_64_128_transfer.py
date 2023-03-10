@@ -93,28 +93,26 @@ Reads the data in the .hdf5 files and adds it to "dat" variable
 #################################################################
 '''
 
-data_dir = "/home/yrshen/Desktop/TLMF/"
+data_dir = "../dataset"
+variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Temperature', 'Mach', 'Pressure_Coefficient']
 
 # parse Euler data
 eulerDataRootPath = f"{data_dir}/euler_data"
 dataFileName = "surface_flow.dat"
-eulerData = parseData.parse_data(eulerDataRootPath, dataFileName)
+eulerData = parseData.parse_data(eulerDataRootPath, dataFileName, variables)
 eulerData = np.asarray(eulerData)
 
 # parse RANS data
 ransDataRootPath = f"{data_dir}/rans_data"
-ransData = parseData.parse_data(ransDataRootPath, dataFileName)
+ransData = parseData.parse_data(ransDataRootPath, dataFileName, variables)
 ransData = np.asarray(ransData)
 
 dat = {}
+for idx, variable in enumerate(variables):
+    data_name = f'{variable.lower()}'
 
-dat['ks_lfs'] = eulerData[:, :, 2]
-dat['ps_lfs'] = eulerData[:, :, 3]
-dat['ss_lfs'] = eulerData[:, :, 4]
-
-dat['ks_hfs'] = ransData[:, :, 2]
-dat['ps_hfs'] = ransData[:, :, 3]
-dat['ss_hfs'] = ransData[:, :, 4]
+    dat[f'{data_name}_lfs'] = eulerData[:, :, idx]
+    dat[f'{data_name}_hfs'] = ransData[:, :, idx]
 
 '''
 #################################################################

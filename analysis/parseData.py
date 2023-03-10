@@ -51,6 +51,88 @@ def list_subfolders(folder):
     return subfolders
 
 
+def read_tecplot_file(filename):
+    """Function. Read tabular data for multiple zones from ASCII Tecplot file.
+    Parameters
+        filename - Tecplot data file
+    Outputs
+        data - history data dictionary
+    """
+    data = {}
+    with open(filename, 'r') as file:
+        variables = []
+        lines = file.readlines()
+        for idx, line in enumerate(lines):
+
+            # ignore any comment line
+            if '#' in line:
+                line = line.split('#')[0]
+                if not line:
+                    continue
+
+            # skip title line if there is one
+            elif 'title' in line.lower():
+                continue
+
+            # read list of variable names
+            elif 'variable' in line.lower():
+                line = line.split('=', 1)[1]
+                if '\\' in line:
+                    line = lines[idx + 1]
+                variables = [var.strip().strip("\"") for var in line.split(',')]
+                continue
+
+            # check to see if there is a new zone definition
+            elif 'zone' in line.lower():
+                # extract zone name
+                # zone_name = line.split('=', 1)[1].strip()
+                # zone_name = zone_name.strip("\"")
+                zone_name = 'ZONE0'      # temporary hack
+                data[zone_name] = {}
+
+                # if variable names are defined, assign an empty numpy array to that variable
+                if variables:
+                    for var in variables:
+                        data[zone_name][var] = np.empty(0)
+                continue
+
+            # sort data out into the different variables
+            else:
+                if '"' in line:
+                    continue
+
+                # create a dummy zone named ZONE0 if no zone is defined
+                if 'zone_name' not in locals():
+                    zone_name = 'ZONE0'
+                    data[zone_name] = {}
+
+                    # assign an empty numpy array if variable names are defined
+                    if variables:
+                        for var in variables:
+                            data[zone_name][var] = np.empty(0)
+
+                # comma-delimited data
+                if ',' in line:
+                    line_list = [val.strip() for val in line.split(',')]
+
+                # space-delimited data
+                else:
+                    line_list = line.split()
+
+                for i, val in enumerate(line_list):
+                    if variables:
+                        data[zone_name][variables[i]] = np.append(data[zone_name][variables[i]], float(val))
+
+                    # name variables according to order of appearance if no variables are defined
+                    else:
+                        if not data[zone_name]:
+                            for j in range(0, len(line.split())):
+                                data[zone_name]['var' + str(j)] = np.empty(0)
+                        data[zone_name]['var' + str(i)] = np.append(data[zone_name]['var' + str(i)], float(val))
+
+    return data
+
+
 def read_tecplot_history_file(filename):
     """Function. Read tabular data for multiple zones from ASCII Tecplot file.
     Parameters
@@ -100,7 +182,8 @@ def get_force_data(filename='forces_breakdown.dat'):
 
     return force_data
 
-def parse_data(fileRootPath, fileName):
+
+def parse_data(fileRootPath, fileName, variables):
     #parsing data into numpy array 
     #INNNNNPut
     #fileRootPath: string of the absolute path to dir containing subfolder of all data 
@@ -114,7 +197,6 @@ def parse_data(fileRootPath, fileName):
     totalSubDirCount = len(subDirList)
     print("Total %i directories found, parsing data\n"%totalSubDirCount)
 
-
     # loop over dir list to read data
     for ii in range(totalSubDirCount):
         curSubPath = subDirList[ii]
@@ -122,13 +204,17 @@ def parse_data(fileRootPath, fileName):
             fileName = '/'+fileName
 
         fileRelPath = curSubPath + fileName
-        curdataArray = parse_text_file(fileRelPath)
-        print(np.shape(curdataArray))
+        curdata_dict = read_tecplot_file(fileRelPath)
+        data_dict = curdata_dict['ZONE0']
+
+        curdataArray = np.array([], dtype=float)
+        for variable, data in data_dict.items():
+            if variable in variables:
+                curdataArray = np.append(curdataArray, data)
+
+        curdataArray = np.reshape(curdataArray, (-1, len(variables)))
+
         Data.append(curdataArray)
-
-
-
-    print(np.shape(Data))
 
     return Data
 
