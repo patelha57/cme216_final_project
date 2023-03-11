@@ -69,14 +69,14 @@ def loader_test(data, num_test, Nxy, bs, scale, variables):
     input_tensors = []
     output_tensor = None
     for idx, variable in enumerate(variables):
-        var_name = f'{variable.lower()}_{scale}'
-        var_name_test = f'{var_name}_test'
+        var_name       = f'{variable.lower()}_{scale}'
+        var_name_test  = f'{var_name}_test'
         var_name_train = f'{var_name}_train'
 
         idx = np.array(torch.randperm(len(data[var_name])))
         var_data_idx = data[var_name][idx]
 
-        data[var_name_test] = var_data_idx[0:num_test]
+        data[var_name_test]  = var_data_idx[0:num_test]
         data[var_name_train] = var_data_idx[num_test:]
 
         var_data = data[var_name_test]
@@ -93,14 +93,18 @@ def loader_test(data, num_test, Nxy, bs, scale, variables):
         else:
             input_tensors.append(var_test)
 
-    # pack loaders
     x_test = torch.stack(input_tensors)
     y_test = output_tensor
 
-    test_dataset = torch.utils.data.TensorDataset(x_test, y_test)
-    test_loader  = torch.utils.data.DataLoader(test_dataset, batch_size=bs)
+    # pack loaders
+    test_loaders = []
+    for idx in range(nvars - 1):
+        test_dataset = torch.utils.data.TensorDataset(x_test[idx], y_test)
+        test_loader  = torch.utils.data.DataLoader(test_dataset, batch_size=bs)
 
-    return test_loader, data
+        test_loaders.append(test_loader)
+
+    return test_loaders, data
 
 
 def loader_train(data, scale, num_training, Nxy, bs, variables, order=0):
@@ -129,12 +133,12 @@ def loader_train(data, scale, num_training, Nxy, bs, variables, order=0):
     # turn into torch tensor of the correct form
     (npoints, nvars) = Nxy
     data_start = order * num_training
-    data_end = (order + 1) * num_training
+    data_end   = (order + 1) * num_training
 
     input_tensors = []
     output_tensor = None
     for idx, variable in enumerate(variables):
-        var_name = f'{variable.lower()}_{scale}'
+        var_name       = f'{variable.lower()}_{scale}'
         var_name_train = f'{var_name}_train'
 
         var_data = data[var_name_train][data_start:data_end]
@@ -151,14 +155,18 @@ def loader_train(data, scale, num_training, Nxy, bs, variables, order=0):
         else:
             input_tensors.append(var_train)
 
-    # pack loaders
     x_train = torch.stack(input_tensors)
     y_train = output_tensor
 
-    train_dataset = torch.utils.data.TensorDataset(x_train, y_train)
-    train_loader  = torch.utils.data.DataLoader(train_dataset, batch_size=bs, shuffle=True)
+    # pack loaders
+    train_loaders = []
+    for idx in range(nvars - 1):
+        train_dataset = torch.utils.data.TensorDataset(x_train[idx], y_train)
+        train_loader  = torch.utils.data.DataLoader(train_dataset, batch_size=bs, shuffle=True)
 
-    return train_loader
+        train_loaders.append(train_loader)
+
+    return train_loaders
 
 
 def test(epoch, model, test_loader):
@@ -194,14 +202,14 @@ def test(epoch, model, test_loader):
     return rmse_test, mae_test
 
 
-def model_train(train_loader, test_loader, reps, n_epochs, log_interval, model_orig, lr, wd, factor, min_lr):
+def model_train(train_loaders, test_loaders, reps, n_epochs, log_interval, model_orig, lr, wd, factor, min_lr):
     """
     Trains model for repetitions designated by "reps" and
     returns the best model and RMSE obtained by best model
 
     Inputs:
-        train_loader - train loader
-        test_loader - test_ loader
+        train_loaders - train loaders
+        test_loaders - test_ loaders
         reps - number of times to repeat training (int)
         n_epochs - number of epochs to train per each rep (int)
         log_interval - interval(epochs) to compute test error
@@ -216,46 +224,47 @@ def model_train(train_loader, test_loader, reps, n_epochs, log_interval, model_o
         rmse_best - RMSE associated with "model_best"
     """
     device = load_gpu_torch()
-    
+
+    model_best = None
     tic = time.time()
     rmse_best = 10**6  #initial value, just has to be large
-    
-    n_out_pixels_train = len(train_loader.dataset) * train_loader.dataset[0][1].numel()
-    n_out_pixels_test = len(test_loader.dataset) * test_loader.dataset[0][1].numel()
+    for train_loader, test_loader in zip(train_loaders, test_loaders):
+        n_out_pixels_train = len(train_loader.dataset) * train_loader.dataset[0][1].numel()
+        n_out_pixels_test = len(test_loader.dataset) * test_loader.dataset[0][1].numel()
 
-    for rep in range(reps):
-        rmse_train, rmse_test = [], []
-        model = copy.deepcopy(model_orig)
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
-        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=10,
-                                    verbose=True, threshold=0.0001, threshold_mode='rel',
-                                    cooldown=0, min_lr=min_lr, eps=1e-08)
+        for rep in range(reps):
+            rmse_train, rmse_test = [], []
+            model = copy.deepcopy(model_orig)
+            optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=10,
+                                        verbose=True, threshold=0.0001, threshold_mode='rel',
+                                        cooldown=0, min_lr=min_lr, eps=1e-08)
 
-        for epoch in range(1, n_epochs+1):
-            model.train()
-            mse = 0.
-            for batch_idx, (input, target) in enumerate(train_loader):
-                input, target= input.to(device), target.to(device)
-                model.zero_grad()
-                output = model(input)
-                loss = F.l1_loss(output, target,size_average=False)
-                loss.backward()
-                optimizer.step()
-                mse += F.mse_loss(output, target,size_average=False).item()
+            for epoch in range(1, n_epochs + 1):
+                model.train()
+                mse = 0.
+                for batch_idx, (input, target) in enumerate(train_loader):
+                    input, target = input.to(device), target.to(device)
+                    model.zero_grad()
+                    output = model(input)
+                    loss = F.l1_loss(output, target, size_average=False)
+                    loss.backward()
+                    optimizer.step()
+                    mse += F.mse_loss(output, target, size_average=False).item()
 
-            rmse = np.sqrt(mse / n_out_pixels_train)
-            scheduler.step(rmse)
+                rmse = np.sqrt(mse / n_out_pixels_train)
+                scheduler.step(rmse)
 
-            if epoch % log_interval == 0:
-                rmse_train.append(rmse)
-                rmse_t,_ = test(epoch, model=model, test_loader=test_loader)
-                rmse_test.append(rmse_t)
+                if epoch % log_interval == 0:
+                    rmse_train.append(rmse)
+                    rmse_t,_ = test(epoch, model=model, test_loader=test_loader)
+                    rmse_test.append(rmse_t)
 
-        tic2 = time.time()
-        print('Done training {} epochs using {} seconds. Test RMSE = {}'
-              .format(n_epochs, tic2 - tic, rmse_t))
+            tic2 = time.time()
+            print(f'Done training {n_epochs} epochs using {tic2 - tic} seconds. Test RMSE = {rmse_t}')
 
-        if np.mean(rmse_test[-10:]) < rmse_best:
-            model_best = copy.deepcopy(model)
-            rmse_best = np.mean(rmse_test[-10:])
+            if np.mean(rmse_test[-10:]) < rmse_best:
+                model_best = copy.deepcopy(model)
+                rmse_best = np.mean(rmse_test[-10:])
+
     return model_best, rmse_best

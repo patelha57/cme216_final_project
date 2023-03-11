@@ -38,8 +38,8 @@ Experiment controls
 #################################################################
 '''
 # Data quantity selection
-n_hfs = 100   # number of high (128x128) fidelity data
-n_lfs = 300   # number of low (64x64) fidelity data
+n_hfs = 100   # number of high fidelity RANS data
+n_lfs = 300   # number of low fidelity Euler data
 n_test = 100  # number of test data
 
 model_file_name = "final_model.pth"
@@ -130,9 +130,9 @@ npoints = 128
 nvars = len(variables)
 
 # Build LFS data loaders
-test_loader_lfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='lfs', variables=variables)
+test_loaders_lfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='lfs', variables=variables)
 
-train_loader = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(npoints, nvars), bs=40, variables=variables, order=0)
+train_loaders = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(npoints, nvars), bs=40, variables=variables, order=0)
 
 #########################################################
 #########################################################
@@ -145,12 +145,12 @@ model_phase1_orig = DenseED_phase1(model_orig, blocks=(7, 12, 7)).to(device)
 ##########################################################
 ##########################################################
 
-model_phase1, rmse_best = model_train(train_loader=train_loader, test_loader=test_loader_lfs, 
+model_phase1, rmse_best = model_train(train_loaders=train_loaders, test_loaders=test_loaders_lfs,
                                       reps=reps_phase1, n_epochs=n_epochs_phase1, log_interval=1, 
                                       model_orig=model_phase1_orig, 
                                       lr=lr_phase1, wd=wd_phase1, factor=factor_phase1, min_lr=min_lr_phase1)
 print(f"PHASE1 RMSE BEST = {rmse_best}")
-    
+
 '''
 #################################################################
 #################################################################
@@ -163,9 +163,9 @@ Phase2 - experiment [HFS1]
 #################################################################
 '''
 # Build HFS data loaders
-test_loader_hfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(128, 128), bs=40, scale='hfs')
+test_loaders_hfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='hfs', variables=variables)
 
-train_loader = loader_train(data=dat, scale='hfs', num_training=n_hfs, Nxy=(128, 128), bs=40, order=0)
+train_loaders = loader_train(data=dat, scale='hfs', num_training=n_hfs, Nxy=(npoints, nvars), bs=40, variables=variables, order=0)
 
 #########################################################
 #########################################################
@@ -185,7 +185,7 @@ for param in model_phase2_orig.features.up2.parameters():
 #########################################################
 #########################################################
 # Train
-model_phase2, rmse_best = model_train(train_loader=train_loader, test_loader=test_loader_hfs, 
+model_phase2, rmse_best = model_train(train_loaders=train_loaders, test_loaders=test_loaders_hfs,
                                       reps=reps_phase2, n_epochs=n_epochs_phase2, log_interval=1, 
                                       model_orig=model_phase2_orig, 
                                       lr=lr_phase2, wd=wd_phase2, factor=factor_phase2, min_lr=min_lr_phase2)
@@ -210,7 +210,7 @@ for param in model_phase3_orig.parameters():
 #########################################################
 #########################################################
 # Train
-model_phase3, rmse_best = model_train(train_loader=train_loader, test_loader=test_loader_hfs, 
+model_phase3, rmse_best = model_train(train_loaders=train_loaders, test_loaders=test_loaders_hfs,
                                       reps=reps_phase3, n_epochs=n_epochs_phase3, log_interval=1, 
                                       model_orig=model_phase3_orig, 
                                       lr=lr_phase3, wd=wd_phase3, factor=factor_phase3, min_lr=min_lr_phase3)
