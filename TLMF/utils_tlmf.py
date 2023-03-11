@@ -25,161 +25,169 @@ Mar 31,2021
 Sep 29,2021
 '''
 
-def load_GPU_torch():
-    '''
+_DTYPE = torch.float32
+
+
+def load_gpu_torch():
+    """
     Sets torch device to cuda if cuda is avaliable
-    '''
+    """
     USE_GPU = True
-    dtype = torch.float32 # we will be using float throughout this tutorial
     if USE_GPU and torch.cuda.is_available():
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-    # print('using device:', device)
+
     return device
 
 
-def loader_test(data,num_test,Nxy,bs,scale):
-    '''
+def loader_test(data, num_test, Nxy, bs, scale, variables):
+    """
     Builds the data loaders for the test data.
-    
-    Normally, a test-train split can be done with one function, 
-    In this work the procedure is split into 2 differnt functions 
-    because when there is a large dataset to conserve vRAM ( we 
+
+    Normally, a test-train split can be done with one function,
+    In this work the procedure is split into 2 differnt functions
+    because when there is a large dataset to conserve vRAM ( we
     may need to split the process of building training data loaders)
-    
+
     Inputs:
         data - data variable (int)
         num_test - number of test data sets (int)
         Nxy - dimension of data ((int,int))
         bs - batch size (int)
         scale - indicator for fidelity scale of data (str)
-    
+        variables - SU2 output flow variables
+
     Outputs:
         test_loader - data loader for the test data
         data - modified data file with the test data marked as such
-    '''
-    device = load_GPU_torch()
-    
-    ks_name = 'ks_' + scale
-    ss_name = 'ss_' + scale
-    ks_name_test = 'ks_' + scale + '_test'
-    ss_name_test = 'ss_' + scale + '_test'
-    ks_name_train = 'ks_' + scale  + '_train'
-    ss_name_train = 'ss_' + scale  + '_train'
-    
-    n = len(data[ks_name])
-    idx = np.array(torch.randperm(n))
-    (nx,ny) = Nxy
+    """
+    device = load_gpu_torch()
 
-    data_idx_ks = data[ks_name][idx]
-    data_idx_ss = data[ss_name][idx]
-    
-    data[ks_name_test] = data_idx_ks[0:num_test]
-    data[ss_name_test] = data_idx_ss[0:num_test]
-    
-    data[ks_name_train] = data_idx_ks[num_test:]
-    data[ss_name_train] = data_idx_ss[num_test:]
+    (npoints, nvars) = Nxy
 
-    ks_dat = data[ks_name_test]
-    ss_dat = data[ss_name_test]
+    input_tensors = []
+    output_tensor = None
+    for idx, variable in enumerate(variables):
+        var_name       = f'{variable.lower()}_{scale}'
+        var_name_test  = f'{var_name}_test'
+        var_name_train = f'{var_name}_train'
 
-    ks_list = list(ks_dat)
-    ss_list = list(ss_dat)
+        idx = np.array(torch.randperm(len(data[var_name])))
+        var_data_idx = data[var_name][idx]
 
+<<<<<<< HEAD
     ks_torch = torch.stack([torch.Tensor(np.reshape(i,(1, 128))) for i in ks_list])
     ss_torch = torch.stack([torch.Tensor(np.reshape(i,(1, 128))) for i in ss_list])
+=======
+        data[var_name_test]  = var_data_idx[0:num_test]
+        data[var_name_train] = var_data_idx[num_test:]
+>>>>>>> ed3a48c7d739a498fb277e5709d0439b35ef18da
 
-    # shuffle data
-    n = len(ks_dat)
-    idx = torch.randperm(n)
+        var_data = data[var_name_test]
+        var_torch = torch.stack([torch.Tensor(np.reshape(i, (1, npoints, 1))) for i in list(var_data)])
 
-    ks_shuffle = ks_torch[idx]
-    ss_shuffle = ss_torch[idx]
+        # shuffle data
+        idx_test = torch.randperm(len(var_data))
+        var_shuffle = var_torch[idx_test]
 
-    # split into train, validation, test
-    tensor_X = ks_shuffle
-    tensor_y = ss_shuffle
+        # set input and output test data
+        var_test = var_shuffle[:num_test]
+        if variable == 'Pressure_Coefficient':
+            output_tensor = var_test
+        else:
+            input_tensors.append(var_test)
 
-    X_test = tensor_X[:num_test]
-    y_test = tensor_y[:num_test]
+    x_test = torch.stack(input_tensors)
+    y_test = output_tensor
 
     # pack loaders
-    test_dataset = torch.utils.data.TensorDataset(X_test, y_test)
-    test_loader = torch.utils.data.DataLoader(test_dataset,batch_size=bs)
-    X_test = np.asarray(X_test, dtype=np.float32)
-    y_test = np.asarray(y_test, dtype=np.float32)
-    
-    return test_loader, data
+    test_loaders = []
+    for idx in range(nvars - 1):
+        test_dataset = torch.utils.data.TensorDataset(x_test[idx], y_test)
+        test_loader  = torch.utils.data.DataLoader(test_dataset, batch_size=bs)
+
+        test_loaders.append(test_loader)
+
+    return test_loaders, data
 
 
-def loader_train(data, scale, num_training, Nxy, bs, order=0):
-    '''
+def loader_train(data, scale, num_training, Nxy, bs, variables, order=0):
+    """
     Builds the data loaders for the training data.
-    
-    Normally, a test-train split can be done with one function, 
-    In this work the procedure is split into 2 differnt functions 
-    because when there is a large dataset to conserve vRAM ( we 
+
+    Normally, a test-train split can be done with one function,
+    In this work the procedure is split into 2 differnt functions
+    because when there is a large dataset to conserve vRAM ( we
     may need to split the process of building training data loaders)
-    
+
     Inputs:
         data - data variable (int)
         scale - indicator for fidelity scale of data (str)
         num_training - number of training data sets (int)
         Nxy - dimension of data ((int,int))
         bs - batch size (int)
+        variables - SU2 output flow variables
         order - reference int marking the part of the data is being turned into the data loader (int)
-    
+
     Outputs:
         train_loader - data loader with training data
-    '''
-    device = load_GPU_torch()
-    
+    """
+    device = load_gpu_torch()
+
     # turn into torch tensor of the correct form
-    (nx,ny) = Nxy
-    data_start = order*num_training
-    data_end = (order+1)*num_training
-    data_name = scale + '_train'
-    
-    ks_train = data['ks_'+data_name][data_start:data_end]
-    ss_train = data['ss_'+data_name][data_start:data_end]
+    (npoints, nvars) = Nxy
+    data_start = order * num_training
+    data_end   = (order + 1) * num_training
 
-    ks_list_train = list(ks_train)
-    ss_list_train = list(ss_train)
+    input_tensors = []
+    output_tensor = None
+    for idx, variable in enumerate(variables):
+        var_name       = f'{variable.lower()}_{scale}'
+        var_name_train = f'{var_name}_train'
 
-    ks_torch_train = torch.stack([torch.Tensor(np.reshape(i,(1,128,128))) for i in ks_list_train])
-    ss_torch_train = torch.stack([torch.Tensor(np.reshape(i,(16,nx,ny))) for i in ss_list_train])
+        var_data = data[var_name_train][data_start:data_end]
+        var_torch = torch.stack([torch.Tensor(np.reshape(i, (1, npoints, 1))) for i in list(var_data)])
 
-    # shuffle data
-    n_train = len(ks_train)
-    idx_train = torch.randperm(n_train)
+        # shuffle data
+        idx_train = torch.randperm(len(var_data))
+        var_shuffle = var_torch[idx_train]
 
-    X_train = ks_torch_train[idx_train]
-    y_train = ss_torch_train[idx_train]
+        # set input and output training data
+        var_train = var_shuffle
+        if variable == 'Pressure_Coefficient':
+            output_tensor = var_train
+        else:
+            input_tensors.append(var_train)
 
-    print(y_train.shape)
+    x_train = torch.stack(input_tensors)
+    y_train = output_tensor
 
     # pack loaders
-    train_dataset = torch.utils.data.TensorDataset(X_train, y_train)
-    train_loader = torch.utils.data.DataLoader(train_dataset,batch_size=bs,shuffle=True)
+    train_loaders = []
+    for idx in range(nvars - 1):
+        train_dataset = torch.utils.data.TensorDataset(x_train[idx], y_train)
+        train_loader  = torch.utils.data.DataLoader(train_dataset, batch_size=bs, shuffle=True)
 
-    return train_loader
+        train_loaders.append(train_loader)
+
+    return train_loaders
 
 
 def test(epoch, model, test_loader):
-    '''
+    """
     Evaluates test error at each epoch
-    
+
     Inputs:
         epoch - current epoch (int)
-        model - current model being trined 
+        model - current model being trined
         test_loader - test loader
-    
+
     Outputs:
         rmse_test - RMSE(Root Mean Square Error) of test
         mae_test - MAE(Mean Absolute Error) of test
-    '''
-    device = load_GPU_torch()
+    """
+    device = load_gpu_torch()
     
     n_out_pixels_test = len(test_loader.dataset) * test_loader.dataset[0][1].numel()
     model.eval()
@@ -199,14 +207,14 @@ def test(epoch, model, test_loader):
     return rmse_test, mae_test
 
 
-def model_train(train_loader, test_loader, reps, n_epochs, log_interval, model_orig, lr, wd, factor, min_lr):
-    '''
-    Trains model for repetitions designated by "reps" and 
+def model_train(train_loaders, test_loaders, reps, n_epochs, log_interval, model_orig, lr, wd, factor, min_lr):
+    """
+    Trains model for repetitions designated by "reps" and
     returns the best model and RMSE obtained by best model
-    
+
     Inputs:
-        train_loader - train loader
-        test_loader - test_ loader
+        train_loaders - train loaders
+        test_loaders - test_ loaders
         reps - number of times to repeat training (int)
         n_epochs - number of epochs to train per each rep (int)
         log_interval - interval(epochs) to compute test error
@@ -215,52 +223,53 @@ def model_train(train_loader, test_loader, reps, n_epochs, log_interval, model_o
         wd - weight decay
         factor - factor in ReduceLROnPlateau
         min_lr - minimum learning rate in ReduceLROnPlateau
-    
+
     Outputs:
         model_best - model associated with the lowest test error
         rmse_best - RMSE associated with "model_best"
-    '''
-    device = load_GPU_torch()
-    
+    """
+    device = load_gpu_torch()
+
+    model_best = None
     tic = time.time()
     rmse_best = 10**6  #initial value, just has to be large
-    
-    n_out_pixels_train = len(train_loader.dataset) * train_loader.dataset[0][1].numel()
-    n_out_pixels_test = len(test_loader.dataset) * test_loader.dataset[0][1].numel()
+    for train_loader, test_loader in zip(train_loaders, test_loaders):
+        n_out_pixels_train = len(train_loader.dataset) * train_loader.dataset[0][1].numel()
+        n_out_pixels_test = len(test_loader.dataset) * test_loader.dataset[0][1].numel()
 
-    for rep in range(reps):
-        rmse_train, rmse_test = [], []
-        model = copy.deepcopy(model_orig)
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
-        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=10,
-                                    verbose=True, threshold=0.0001, threshold_mode='rel',
-                                    cooldown=0, min_lr=min_lr, eps=1e-08)
+        for rep in range(reps):
+            rmse_train, rmse_test = [], []
+            model = copy.deepcopy(model_orig)
+            optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=10,
+                                        verbose=True, threshold=0.0001, threshold_mode='rel',
+                                        cooldown=0, min_lr=min_lr, eps=1e-08)
 
-        for epoch in range(1, n_epochs+1):
-            model.train()
-            mse = 0.
-            for batch_idx, (input, target) in enumerate(train_loader):
-                input, target= input.to(device), target.to(device)
-                model.zero_grad()
-                output = model(input)
-                loss = F.l1_loss(output, target,size_average=False)
-                loss.backward()
-                optimizer.step()
-                mse += F.mse_loss(output, target,size_average=False).item()
+            for epoch in range(1, n_epochs + 1):
+                model.train()
+                mse = 0.
+                for batch_idx, (input, target) in enumerate(train_loader):
+                    input, target = input.to(device), target.to(device)
+                    model.zero_grad()
+                    output = model(input)
+                    loss = F.l1_loss(output, target, size_average=False)
+                    loss.backward()
+                    optimizer.step()
+                    mse += F.mse_loss(output, target, size_average=False).item()
 
-            rmse = np.sqrt(mse / n_out_pixels_train)
-            scheduler.step(rmse)
+                rmse = np.sqrt(mse / n_out_pixels_train)
+                scheduler.step(rmse)
 
-            if epoch % log_interval == 0:
-                rmse_train.append(rmse)
-                rmse_t,_ = test(epoch, model=model, test_loader=test_loader)
-                rmse_test.append(rmse_t)
+                if epoch % log_interval == 0:
+                    rmse_train.append(rmse)
+                    rmse_t,_ = test(epoch, model=model, test_loader=test_loader)
+                    rmse_test.append(rmse_t)
 
-        tic2 = time.time()
-        print('Done training {} epochs using {} seconds. Test RMSE = {}'
-              .format(n_epochs, tic2 - tic, rmse_t))
+            tic2 = time.time()
+            print(f'Done training {n_epochs} epochs using {tic2 - tic} seconds. Test RMSE = {rmse_t}')
 
-        if np.mean(rmse_test[-10:]) < rmse_best:
-            model_best = copy.deepcopy(model)
-            rmse_best = np.mean(rmse_test[-10:])
+            if np.mean(rmse_test[-10:]) < rmse_best:
+                model_best = copy.deepcopy(model)
+                rmse_best = np.mean(rmse_test[-10:])
+
     return model_best, rmse_best
