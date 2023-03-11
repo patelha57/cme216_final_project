@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import torch
-
+import os
 from dense_ed_tlmf import *
 from utils_tlmf import *
 
@@ -106,10 +106,11 @@ eulerData = np.asarray(eulerData)
 ransDataRootPath = f"{data_dir}/rans_data"
 ransData = parseData.parse_data(ransDataRootPath, dataFileName, variables)
 ransData = np.asarray(ransData)
+print(np.shape(eulerData))
 
 dat = {}
 for idx, variable in enumerate(variables):
-    data_name = f'{variable.lower()}'
+    data_name = variable.lower()
 
     dat[f'{data_name}_lfs'] = eulerData[:, :, idx]
     dat[f'{data_name}_hfs'] = ransData[:, :, idx]

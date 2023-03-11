@@ -87,8 +87,8 @@ def loader_test(data,num_test,Nxy,bs,scale):
     ks_list = list(ks_dat)
     ss_list = list(ss_dat)
 
-    ks_torch = torch.stack([torch.Tensor(np.reshape(i,(1,128,128))) for i in ks_list])
-    ss_torch = torch.stack([torch.Tensor(np.reshape(i,(16,nx,ny))) for i in ss_list])
+    ks_torch = torch.stack([torch.Tensor(np.reshape(i,(1, 128))) for i in ks_list])
+    ss_torch = torch.stack([torch.Tensor(np.reshape(i,(1, 128))) for i in ss_list])
 
     # shuffle data
     n = len(ks_dat)

@@ -192,7 +192,7 @@ def parse_data(fileRootPath, fileName, variables):
     #Data: numPy array contained (Ndata*Nnodes*Nvariables)
 
     Data = []
-
+   
     subDirList = list_subfolders(fileRootPath)
     totalSubDirCount = len(subDirList)
     print("Total %i directories found, parsing data\n"%totalSubDirCount)
