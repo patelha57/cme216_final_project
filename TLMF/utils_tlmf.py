@@ -76,13 +76,8 @@ def loader_test(data, num_test, Nxy, bs, scale, variables):
         idx = np.array(torch.randperm(len(data[var_name])))
         var_data_idx = data[var_name][idx]
 
-<<<<<<< HEAD
-    ks_torch = torch.stack([torch.Tensor(np.reshape(i,(1, 128))) for i in ks_list])
-    ss_torch = torch.stack([torch.Tensor(np.reshape(i,(1, 128))) for i in ss_list])
-=======
         data[var_name_test]  = var_data_idx[0:num_test]
         data[var_name_train] = var_data_idx[num_test:]
->>>>>>> ed3a48c7d739a498fb277e5709d0439b35ef18da
 
         var_data = data[var_name_test]
         var_torch = torch.stack([torch.Tensor(np.reshape(i, (1, npoints, 1))) for i in list(var_data)])

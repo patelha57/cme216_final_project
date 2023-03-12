@@ -38,9 +38,9 @@ Experiment controls
 #################################################################
 '''
 # Data quantity selection
-n_hfs = 100   # number of high fidelity RANS data
-n_lfs = 300   # number of low fidelity Euler data
-n_test = 100  # number of test data
+n_hfs = 3   # number of high fidelity RANS data
+n_lfs = 3   # number of low fidelity Euler data
+n_test = 2  # number of test data
 
 model_file_name = "final_model.pth"
 
@@ -92,8 +92,9 @@ Reads the data in the .hdf5 files and adds it to "dat" variable
 #################################################################
 #################################################################
 '''
+current_dir = os.getcwd()
 
-data_dir = "../dataset"
+data_dir = f"{current_dir}/dataset"
 variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Temperature', 'Mach', 'Pressure_Coefficient']
 
 # parse Euler data
@@ -110,11 +111,7 @@ print(np.shape(eulerData))
 
 dat = {}
 for idx, variable in enumerate(variables):
-<<<<<<< HEAD
-    data_name = variable.lower()
-=======
     var_name = variable.lower()
->>>>>>> ed3a48c7d739a498fb277e5709d0439b35ef18da
 
     dat[f'{var_name}_lfs'] = eulerData[:, :, idx]
     dat[f'{var_name}_hfs'] = ransData[:, :, idx]
@@ -143,8 +140,8 @@ train_loaders = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(npo
 #########################################################
 # Build model
 model_orig = None
-model_orig = DenseED(1, 16, blocks=(7, 12, 7), growth_rate=40, drop_rate=0, bn_size=8, num_init_features=64,
-                     bottleneck=False).to(device)
+model_orig = DenseED(in_channels=1, out_channels=16, blocks=(7, 12, 7), growth_rate=40, drop_rate=0, bn_size=8, 
+                     num_init_features=64, outsize_even=False, bottleneck=False).to(device)
 model_phase1_orig = DenseED_phase1(model_orig, blocks=(7, 12, 7)).to(device)
 
 ##########################################################

@@ -141,7 +141,7 @@ class DenseED(nn.Module):  #From "Convolutional Dense Encoder-Decoder Networks"
         # only conv, half image size
         self.features.add_module('in_conv',
                     nn.Conv2d(in_channels, num_init_features,
-                            kernel_size=5, stride=2, padding=2, bias=False))
+                            kernel_size=7, stride=1, padding=3, bias=False))
 
         # Encoding / transition down ================
         # dense block --> encoding --> dense block --> encoding
@@ -182,6 +182,7 @@ class DenseED(nn.Module):  #From "Convolutional Dense Encoder-Decoder Networks"
             self.features.add_module('up%d' % (i + 1), trans)
             num_features = num_features // 2
 
+        self.output_layer = nn.Conv2d(num_features, 1, kernel_size=1, stride=1, bias=True)
     def forward(self, x):
         y = self.features(x)
         
