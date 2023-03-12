@@ -314,7 +314,6 @@ class DenseED_phase2(nn.Module):
         # from model_p0 (part0, original model)
         self.features.add_module('up2', model_p0.features.up2)
 
-        
     def forward(self, x):
         y = self.features(x)
         y = F.softplus(y.clone(), beta=5)
