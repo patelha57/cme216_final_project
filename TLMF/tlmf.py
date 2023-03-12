@@ -92,10 +92,7 @@ Reads the data in the .hdf5 files and adds it to "dat" variable
 #################################################################
 #################################################################
 '''
-current_dir = os.getcwd()
-data_dir = f"{current_dir}/dataset"
-# if you had problem finding the data dir you want to comment out previous 2 lines
-#data_dir = "../dataset"
+data_dir = os.path.abspath(f'{os.pardir}/dataset')
 variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Temperature', 'Mach', 'Pressure_Coefficient']
 
 # parse Euler data
