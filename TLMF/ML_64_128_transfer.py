@@ -93,8 +93,9 @@ Reads the data in the .hdf5 files and adds it to "dat" variable
 #################################################################
 '''
 current_dir = os.getcwd()
-
 data_dir = f"{current_dir}/dataset"
+# if you had problem finding the data dir you want to comment out previous 2 lines
+#data_dir = "../dataset"
 variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Temperature', 'Mach', 'Pressure_Coefficient']
 
 # parse Euler data
@@ -140,8 +141,8 @@ train_loaders = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(npo
 #########################################################
 # Build model
 model_orig = None
-model_orig = DenseED(in_channels=1, out_channels=16, blocks=(7, 12, 7), growth_rate=40, drop_rate=0, bn_size=8, 
-                     num_init_features=64, outsize_even=False, bottleneck=False).to(device)
+model_orig = DenseED(in_channels=1, out_channels=128, blocks=(7, 12, 7), growth_rate=40, drop_rate=0, bn_size=8, 
+                     num_init_features=128, outsize_even=True, bottleneck=False).to(device)
 model_phase1_orig = DenseED_phase1(model_orig, blocks=(7, 12, 7)).to(device)
 
 ##########################################################
@@ -181,8 +182,9 @@ for param in model_phase2_orig.parameters():
 # Unfreeze the parts we do want to update
 for param in model_phase2_orig.features.decblock2.parameters():
     param.requires_grad = True
-for param in model_phase2_orig.features.up2.parameters():
-    param.requires_grad = True
+# the up2 layer is removed due to dimension conflict
+#for param in model_phase2_orig.features.up2.parameters():
+#    param.requires_grad = True
 
 #########################################################
 #########################################################

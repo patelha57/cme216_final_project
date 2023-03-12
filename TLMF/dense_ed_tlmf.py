@@ -182,7 +182,13 @@ class DenseED(nn.Module):  #From "Convolutional Dense Encoder-Decoder Networks"
             self.features.add_module('up%d' % (i + 1), trans)
             num_features = num_features // 2
 
-        self.output_layer = nn.Conv2d(num_features, 1, kernel_size=1, stride=1, bias=True)
+        #self.features.add_module('out_conv',
+        #            nn.Conv2d(num_features, out_channels=1,  kernel_size=1, stride=1, bias=True))
+        #self.output_layer = nn.Conv2d(num_features, 1, kernel_size=1, stride=1, bias=True)
+        #use the main script line 143 set out_channel = 128 and num_init_feature = 128,
+        #                                 dimension of output       dimension of input
+        #
+
     def forward(self, x):
         y = self.features(x)
         
@@ -251,7 +257,7 @@ class DenseED_phase1(nn.Module):
             'temp_out',
             nn.Conv2d(
                 in_channels=int(last_in+last_out*blocks[2]),
-                out_channels=16,
+                out_channels=1,
                 kernel_size=1, stride=1, padding=0, bias=False
             )
         )
@@ -312,7 +318,23 @@ class DenseED_phase2(nn.Module):
         self.features.add_module('decblock2', model_p1.features.decblock2)
         
         # from model_p0 (part0, original model)
-        self.features.add_module('up2', model_p0.features.up2)
+
+        #up layer increases resolution by 2 and down layer reduces resolution by 2
+        # need to remove the final up later to prevent superresolution
+        # added new output layer to map back 
+
+        last_in = model_p0.features.decblock2.denselayer1.conv1.in_channels
+        last_out = model_p0.features.decblock2.denselayer1.conv1.out_channels
+        self.features.add_module(
+            'temp_out',
+            nn.Conv2d(
+                in_channels=int(last_in+last_out*7),
+                out_channels=1,
+                kernel_size=1, stride=1, padding=0, bias=False
+            )
+        )
+        # in channels = int(last_in + last_out*blocks[2] )
+
 
         
     def forward(self, x):
