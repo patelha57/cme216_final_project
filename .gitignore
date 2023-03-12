@@ -1,0 +1,12 @@
+# Python files
+*.pyc
+
+# Mac files
+*.DS_Store
+
+# Ignore IDE files
+.idea/
+.vscode/
+
+# Bytecode files
+__pycache__/
