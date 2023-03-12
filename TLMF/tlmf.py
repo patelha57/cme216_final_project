@@ -2,10 +2,10 @@ import time
 import numpy as np
 import torch
 import os
-from dense_ed_tlmf import *
-from utils_tlmf import *
+from tlmf_network import *
+from tlmf_utils import *
 
-from analysis import parseData
+from analysis import parser
 
 '''
 "Accelerated training of neural networks via multi-fidelity simulations"
@@ -101,12 +101,12 @@ variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Tempe
 # parse Euler data
 eulerDataRootPath = f"{data_dir}/euler_data"
 dataFileName = "surface_flow.dat"
-eulerData = parseData.parse_data(eulerDataRootPath, dataFileName, variables)
+eulerData = parser.parse_data(eulerDataRootPath, dataFileName, variables)
 eulerData = np.asarray(eulerData)
 
 # parse RANS data
 ransDataRootPath = f"{data_dir}/rans_data"
-ransData = parseData.parse_data(ransDataRootPath, dataFileName, variables)
+ransData = parser.parse_data(ransDataRootPath, dataFileName, variables)
 ransData = np.asarray(ransData)
 print(np.shape(eulerData))
 

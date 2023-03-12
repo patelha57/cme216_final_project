@@ -336,7 +336,6 @@ class DenseED_phase2(nn.Module):
         # in channels = int(last_in + last_out*blocks[2] )
 
 
-        
     def forward(self, x):
         y = self.features(x)
         y = F.softplus(y.clone(), beta=5)
