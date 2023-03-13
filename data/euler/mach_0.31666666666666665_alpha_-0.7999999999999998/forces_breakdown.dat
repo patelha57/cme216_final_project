@@ -1,0 +1,98 @@
+
+-------------------------------------------------------------------------
+|    ___ _   _ ___                                                      |
+|   / __| | | |_  )   Release 7.4.0 "Blackbird"                         |
+|   \__ \ |_| |/ /                                                      |
+|   |___/\___//___|   Suite (Computational Fluid Dynamics Code)         |
+|                                                                       |
+-------------------------------------------------------------------------
+| SU2 Project Website: https://su2code.github.io                        |
+|                                                                       |
+| The SU2 Project is maintained by the SU2 Foundation                   |
+| (http://su2foundation.org)                                            |
+-------------------------------------------------------------------------
+| Copyright 2012-2022, SU2 Contributors                                 |
+|                                                                       |
+| SU2 is free software; you can redistribute it and/or                  |
+| modify it under the terms of the GNU Lesser General Public            |
+| License as published by the Free Software Foundation; either          |
+| version 2.1 of the License, or (at your option) any later version.    |
+|                                                                       |
+| SU2 is distributed in the hope that it will be useful,                |
+| but WITHOUT ANY WARRANTY; without even the implied warranty of        |
+| MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      |
+| Lesser General Public License for more details.                       |
+|                                                                       |
+| You should have received a copy of the GNU Lesser General Public      |
+| License along with SU2. If not, see <http://www.gnu.org/licenses/>.   |
+-------------------------------------------------------------------------
+
+
+Problem definition:
+
+Compressible Euler equations.
+Mach number: 0.316667.
+Angle of attack (AoA): -0.8 deg, and angle of sideslip (AoS): 0 deg.
+Non-Dimensional simulation (P=1.0, Rho=1.0, T=1.0 at the farfield).
+The reference area is 1 m^2.
+The reference length is 1 m.
+
+
+Problem definition:
+
+Inviscid flow: Computing density based on free-stream
+temperature and pressure using the ideal gas law.
+Force coefficients computed using free-stream values.
+-- Input conditions:
+Fluid Model: STANDARD_AIR 
+Specific gas constant: 287.058 N.m/kg.K.
+Specific gas constant (non-dim): 1
+Specific Heat Ratio: 1.4000 
+Free-stream static pressure: 101325 Pa.
+Free-stream total pressure: 108618 Pa.
+Free-stream temperature: 288.15 K.
+Free-stream total temperature: 293.929 K.
+Free-stream density: 1.22498 kg/m^3.
+Free-stream velocity: (50.2691, 8.86379) m/s. Magnitude: 51.0446 m/s.
+Free-stream total energy per unit mass: 208092 m^2/s^2.
+-- Reference values:
+Reference specific gas constant: 287.058 N.m/kg.K.
+Reference pressure: 101325 Pa.
+Reference temperature: 288.15 K.
+Reference density: 1.22498 kg/m^3.
+Reference velocity: 287.603 m/s.
+Reference energy per unit mass: 82715.8 m^2/s^2.
+-- Resulting non-dimensional state:
+Mach number (non-dim): 0.316667
+Specific gas constant (non-dim): 1
+Free-stream temperature (non-dim): 1
+Free-stream pressure (non-dim): 1
+Free-stream density (non-dim): 1
+Free-stream velocity (non-dim): (0.374649, -0.00523142). Magnitude: 0.177482
+Free-stream total energy per unit mass (non-dim): 2.51575
+
+
+Forces breakdown:
+
+Center of Pressure: X=0.012694Y+0.260665 m.
+
+NOTE: Multiply forces by the non-dimensional factor: 0.070194, and the reference factor: 101325.000000
+to obtain the dimensional force.
+
+Total CL:      -0.102331 | Pressure (  100%):   -0.102331 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CD:       0.000130 | Pressure (   99%):    0.000130 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CL/CD: -787.652085 | Pressure (  100%): -787.652085 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CMz:     -0.001091 | Pressure (  100%):   -0.001091 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CFx:     -0.001299 | Pressure (  100%):   -0.001299 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CFy:     -0.102322 | Pressure (  100%):   -0.102322 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+
+
+Surface name: AIRFOIL
+
+Total CL    (  100%):   -0.102331 | Pressure (  100%):   -0.102331 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CD    (   99%):    0.000130 | Pressure (   99%):    0.000130 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CL/CD (  100%): -787.652085 | Pressure (  100%): -787.652085 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CMz   (  100%):   -0.001091 | Pressure (  100%):   -0.001091 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CFx   (  100%):   -0.001299 | Pressure (  100%):   -0.001299 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+Total CFy   (  100%):   -0.102322 | Pressure (  100%):   -0.102322 | Friction (    0%):    0.000000 | Momentum (    0%):    0.000000
+
