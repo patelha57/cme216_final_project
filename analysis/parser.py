@@ -213,8 +213,7 @@ def parse_data(fileRootPath, fileName, variables):
             if variable in variables:
                 curdataArray = np.append(curdataArray, data)
 
-        curdataArray = np.reshape(curdataArray, (-1, len(variables)))
-
+        curdataArray = np.reshape(curdataArray, (-1, len(variables)), order='F')
         Data.append(curdataArray)
 
     return Data
