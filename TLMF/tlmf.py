@@ -38,9 +38,9 @@ Experiment controls
 #################################################################
 '''
 # Data quantity selection
-n_hfs = 3   # number of high fidelity RANS data
-n_lfs = 3   # number of low fidelity Euler data
-n_test = 2  # number of test data
+n_hfs = 10   # number of high fidelity RANS data
+n_lfs = 10   # number of low fidelity Euler data
+n_test = 4  # number of test data
 
 model_file_name = "final_model.pth"
 
@@ -93,7 +93,11 @@ Reads the data in the .hdf5 files and adds it to "dat" variable
 #################################################################
 '''
 data_dir = os.path.abspath(f'{os.pardir}/data')
-variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Temperature', 'Mach', 'Pressure_Coefficient']
+variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Temperature', 'Mach']
+target_variables = ['Laminar_Viscosity', 'Heat_Flux']      # target RANS variables to predict
+
+npoints = 128
+nvars = len(variables)
 
 # parse Euler data
 eulerDataRootPath = f"{data_dir}/euler"
@@ -103,16 +107,22 @@ eulerData = np.asarray(eulerData)
 
 # parse RANS data
 ransDataRootPath = f"{data_dir}/rans"
-ransData = parser.parse_data(ransDataRootPath, dataFileName, variables)
+ransData = parser.parse_data(ransDataRootPath, dataFileName, variables + target_variables)
 ransData = np.asarray(ransData)
-print(np.shape(eulerData))
 
+# organize low-fidelity Euler and high-fidelity RANS data
 dat = {}
 for idx, variable in enumerate(variables):
     var_name = variable.lower()
 
     dat[f'{var_name}_lfs'] = eulerData[:, :, idx]
     dat[f'{var_name}_hfs'] = ransData[:, :, idx]
+
+for idx, variable in enumerate(target_variables):
+    var_name = variable.lower()
+
+    dat[f'{var_name}_lfs'] = None
+    dat[f'{var_name}_hfs'] = ransData[:, :, idx + nvars]
 
 '''
 #################################################################
@@ -126,26 +136,25 @@ Phase1 - experiment [LFS]
 #################################################################
 '''
 
-npoints = 128
-nvars = len(variables)
-
 # Build LFS data loaders
-test_loaders_lfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='lfs', variables=variables)
+test_loader_lfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='lfs',
+                                    variables=variables, target_variables=target_variables, phase='PHASE1')
 
-train_loaders = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(npoints, nvars), bs=40, variables=variables, order=0)
+train_loader = loader_train(data=dat, scale='lfs', num_training=n_lfs, Nxy=(npoints, nvars), bs=40,
+                             variables=variables, target_variables=target_variables, phase='PHASE1', order=0)
 
 #########################################################
 #########################################################
 # Build model
 model_orig = None
-model_orig = DenseED(in_channels=1, out_channels=128, blocks=(7, 12, 7), growth_rate=40, drop_rate=0, bn_size=8, 
-                     num_init_features=128, outsize_even=True, bottleneck=False).to(device)
+model_orig = DenseED(in_channels=1, out_channels=npoints, blocks=(7, 12, 7), growth_rate=40, drop_rate=0, bn_size=8,
+                     num_init_features=npoints, outsize_even=True, bottleneck=False).to(device)
 model_phase1_orig = DenseED_phase1(model_orig, blocks=(7, 12, 7)).to(device)
 
 ##########################################################
 ##########################################################
 
-model_phase1, rmse_best = model_train(train_loaders=train_loaders, test_loaders=test_loaders_lfs,
+model_phase1, rmse_best = model_train(train_loader=train_loader, test_loader=test_loader_lfs,
                                       reps=reps_phase1, n_epochs=n_epochs_phase1, log_interval=1, 
                                       model_orig=model_phase1_orig, 
                                       lr=lr_phase1, wd=wd_phase1, factor=factor_phase1, min_lr=min_lr_phase1)
@@ -163,9 +172,11 @@ Phase2 - experiment [HFS1]
 #################################################################
 '''
 # Build HFS data loaders
-test_loaders_hfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='hfs', variables=variables)
+test_loader_hfs, dat = loader_test(data=dat, num_test=n_test, Nxy=(npoints, nvars), bs=40, scale='hfs',
+                                    variables=variables, target_variables=target_variables, phase='PHASE2')
 
-train_loaders = loader_train(data=dat, scale='hfs', num_training=n_hfs, Nxy=(npoints, nvars), bs=40, variables=variables, order=0)
+train_loader = loader_train(data=dat, scale='hfs', num_training=n_hfs, Nxy=(npoints, nvars), bs=40,
+                             variables=variables, target_variables=target_variables, phase='PHASE2', order=0)
 
 #########################################################
 #########################################################
@@ -186,7 +197,7 @@ for param in model_phase2_orig.features.decblock2.parameters():
 #########################################################
 #########################################################
 # Train
-model_phase2, rmse_best = model_train(train_loaders=train_loaders, test_loaders=test_loaders_hfs,
+model_phase2, rmse_best = model_train(train_loader=train_loader, test_loader=test_loader_hfs,
                                       reps=reps_phase2, n_epochs=n_epochs_phase2, log_interval=1, 
                                       model_orig=model_phase2_orig, 
                                       lr=lr_phase2, wd=wd_phase2, factor=factor_phase2, min_lr=min_lr_phase2)
@@ -211,7 +222,7 @@ for param in model_phase3_orig.parameters():
 #########################################################
 #########################################################
 # Train
-model_phase3, rmse_best = model_train(train_loaders=train_loaders, test_loaders=test_loaders_hfs,
+model_phase3, rmse_best = model_train(train_loader=train_loader, test_loader=test_loader_hfs,
                                       reps=reps_phase3, n_epochs=n_epochs_phase3, log_interval=1, 
                                       model_orig=model_phase3_orig, 
                                       lr=lr_phase3, wd=wd_phase3, factor=factor_phase3, min_lr=min_lr_phase3)
