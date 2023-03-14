@@ -92,17 +92,17 @@ Reads the data in the .hdf5 files and adds it to "dat" variable
 #################################################################
 #################################################################
 '''
-data_dir = os.path.abspath(f'{os.pardir}/dataset')
+data_dir = os.path.abspath(f'{os.pardir}/data')
 variables = ['Density', 'Momentum_x', 'Momentum_y', 'Energy', 'Pressure', 'Temperature', 'Mach', 'Pressure_Coefficient']
 
 # parse Euler data
-eulerDataRootPath = f"{data_dir}/euler_data"
+eulerDataRootPath = f"{data_dir}/euler"
 dataFileName = "surface_flow.dat"
 eulerData = parser.parse_data(eulerDataRootPath, dataFileName, variables)
 eulerData = np.asarray(eulerData)
 
 # parse RANS data
-ransDataRootPath = f"{data_dir}/rans_data"
+ransDataRootPath = f"{data_dir}/rans"
 ransData = parser.parse_data(ransDataRootPath, dataFileName, variables)
 ransData = np.asarray(ransData)
 print(np.shape(eulerData))

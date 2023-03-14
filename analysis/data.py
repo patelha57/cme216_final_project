@@ -39,6 +39,7 @@ if mpi.isroot():
 ################################################################################
 
 # user-defined options
+test_case = 'NACA0012'
 config = 'euler.cfg'
 markers = ['AIRFOIL']
 nzone = 1
@@ -64,7 +65,8 @@ mpi.barrier()
 ################################################################################
 
 # initialize flow solver
-config = f'../data/NACA0012/{config}'
+config_path = os.path.abspath(f'{os.pardir}/examples/{test_case}')
+config = f'{config_path}/{config}'
 solver = pysu2.CSinglezoneDriver(config, nzone, mpi.COMM)
 model = models.preprocess_solver(solver, markers)
 
